@@ -1,0 +1,26 @@
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "interests": ["data analysis", "python"],
+  "experience_level": "beginner",
+  "goals": {
+    "raw_text": "I want to become a data analyst. I know a little Python and Excel.",
+    "parsed": ["become a data analyst", "learn SQL", "learn data visualization"],
+    "target_role": "Data Analyst"
+  },
+  "completed_courses": [
+    {
+      "course_id": "py-101",
+      "title": "Intro to Python",
+      "provider": "Coursera",
+      "completed_at": "2026-06-01"
+    }
+  ],
+  "current_skills": [
+    { "skill": "python", "proficiency": 2 },
+    { "skill": "excel", "proficiency": 3 }
+  ],
+  "preferences": {
+    "time_commitment": "5 hours/week",
+    "preferred_formats": ["video", "project"]
+  }
+}

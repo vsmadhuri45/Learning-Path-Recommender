@@ -1,0 +1,25 @@
+{
+  "user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "interests": ["machine learning", "deep learning", "mlops"],
+  "experience_level": "advanced",
+  "goals": {
+    "raw_text": "I'm a backend engineer moving into ML engineering. I want to ship models to production.",
+    "parsed": ["learn mlops", "learn model deployment", "learn deep learning"],
+    "target_role": "Machine Learning Engineer"
+  },
+  "completed_courses": [
+    { "course_id": "py-101", "title": "Intro to Python", "provider": "Coursera", "completed_at": "2024-01-15" },
+    { "course_id": "ml-201", "title": "Applied Machine Learning", "provider": "edX", "completed_at": "2025-03-20" },
+    { "course_id": "sql-201", "title": "SQL for Data", "provider": "Udemy", "completed_at": "2024-08-10" }
+  ],
+  "current_skills": [
+    { "skill": "python", "proficiency": 5 },
+    { "skill": "sql", "proficiency": 4 },
+    { "skill": "machine learning", "proficiency": 3 },
+    { "skill": "docker", "proficiency": 4 }
+  ],
+  "preferences": {
+    "time_commitment": "10 hours/week",
+    "preferred_formats": ["reading", "project"]
+  }
+}
