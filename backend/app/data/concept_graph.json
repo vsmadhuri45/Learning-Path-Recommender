@@ -1,0 +1,205 @@
+{
+  "roles": ["ML Engineer", "Data Analyst"],
+  "concepts": [
+    {
+      "concept_id": "python_basics",
+      "name": "Python Basics",
+      "skill_id": "programming",
+      "role_id": "ML Engineer",
+      "prerequisites": [],
+      "role_importance": 0.9,
+      "difficulty": 1,
+      "estimated_learning_cost": 6
+    },
+    {
+      "concept_id": "numpy_pandas",
+      "name": "NumPy & Pandas",
+      "skill_id": "programming",
+      "role_id": "ML Engineer",
+      "prerequisites": ["python_basics"],
+      "role_importance": 0.85,
+      "difficulty": 2,
+      "estimated_learning_cost": 6
+    },
+    {
+      "concept_id": "linear_algebra",
+      "name": "Linear Algebra",
+      "skill_id": "mathematics",
+      "role_id": "ML Engineer",
+      "prerequisites": [],
+      "role_importance": 0.8,
+      "difficulty": 3,
+      "estimated_learning_cost": 8
+    },
+    {
+      "concept_id": "probability",
+      "name": "Probability",
+      "skill_id": "mathematics",
+      "role_id": "ML Engineer",
+      "prerequisites": [],
+      "role_importance": 0.85,
+      "difficulty": 2,
+      "estimated_learning_cost": 6
+    },
+    {
+      "concept_id": "statistics",
+      "name": "Statistics",
+      "skill_id": "mathematics",
+      "role_id": "ML Engineer",
+      "prerequisites": ["probability"],
+      "role_importance": 0.8,
+      "difficulty": 3,
+      "estimated_learning_cost": 6
+    },
+    {
+      "concept_id": "regression",
+      "name": "Regression",
+      "skill_id": "machine_learning",
+      "role_id": "ML Engineer",
+      "prerequisites": ["statistics", "linear_algebra"],
+      "role_importance": 0.85,
+      "difficulty": 3,
+      "estimated_learning_cost": 8
+    },
+    {
+      "concept_id": "classification",
+      "name": "Classification",
+      "skill_id": "machine_learning",
+      "role_id": "ML Engineer",
+      "prerequisites": ["regression"],
+      "role_importance": 0.9,
+      "difficulty": 3,
+      "estimated_learning_cost": 8
+    },
+    {
+      "concept_id": "model_evaluation",
+      "name": "Model Evaluation",
+      "skill_id": "machine_learning",
+      "role_id": "ML Engineer",
+      "prerequisites": ["classification"],
+      "role_importance": 0.75,
+      "difficulty": 2,
+      "estimated_learning_cost": 4
+    },
+    {
+      "concept_id": "optimization",
+      "name": "Optimization",
+      "skill_id": "machine_learning",
+      "role_id": "ML Engineer",
+      "prerequisites": ["linear_algebra"],
+      "role_importance": 0.85,
+      "difficulty": 4,
+      "estimated_learning_cost": 8
+    },
+    {
+      "concept_id": "neural_networks",
+      "name": "Neural Networks",
+      "skill_id": "deep_learning",
+      "role_id": "ML Engineer",
+      "prerequisites": ["optimization", "classification"],
+      "role_importance": 0.9,
+      "difficulty": 4,
+      "estimated_learning_cost": 10
+    },
+    {
+      "concept_id": "excel_basics",
+      "name": "Excel Basics",
+      "skill_id": "tools",
+      "role_id": "Data Analyst",
+      "prerequisites": [],
+      "role_importance": 0.7,
+      "difficulty": 1,
+      "estimated_learning_cost": 4
+    },
+    {
+      "concept_id": "sql_basics",
+      "name": "SQL Basics",
+      "skill_id": "databases",
+      "role_id": "Data Analyst",
+      "prerequisites": [],
+      "role_importance": 0.9,
+      "difficulty": 2,
+      "estimated_learning_cost": 6
+    },
+    {
+      "concept_id": "sql_joins",
+      "name": "SQL Joins & Aggregation",
+      "skill_id": "databases",
+      "role_id": "Data Analyst",
+      "prerequisites": ["sql_basics"],
+      "role_importance": 0.85,
+      "difficulty": 3,
+      "estimated_learning_cost": 6
+    },
+    {
+      "concept_id": "python_for_analysis",
+      "name": "Python for Analysis",
+      "skill_id": "programming",
+      "role_id": "Data Analyst",
+      "prerequisites": [],
+      "role_importance": 0.75,
+      "difficulty": 2,
+      "estimated_learning_cost": 6
+    },
+    {
+      "concept_id": "pandas_basics",
+      "name": "Pandas Basics",
+      "skill_id": "programming",
+      "role_id": "Data Analyst",
+      "prerequisites": ["python_for_analysis"],
+      "role_importance": 0.8,
+      "difficulty": 2,
+      "estimated_learning_cost": 6
+    },
+    {
+      "concept_id": "descriptive_statistics",
+      "name": "Descriptive Statistics",
+      "skill_id": "statistics",
+      "role_id": "Data Analyst",
+      "prerequisites": [],
+      "role_importance": 0.85,
+      "difficulty": 2,
+      "estimated_learning_cost": 5
+    },
+    {
+      "concept_id": "hypothesis_testing",
+      "name": "Hypothesis Testing",
+      "skill_id": "statistics",
+      "role_id": "Data Analyst",
+      "prerequisites": ["descriptive_statistics"],
+      "role_importance": 0.7,
+      "difficulty": 3,
+      "estimated_learning_cost": 6
+    },
+    {
+      "concept_id": "data_cleaning",
+      "name": "Data Cleaning",
+      "skill_id": "data_wrangling",
+      "role_id": "Data Analyst",
+      "prerequisites": ["excel_basics", "pandas_basics"],
+      "role_importance": 0.85,
+      "difficulty": 2,
+      "estimated_learning_cost": 5
+    },
+    {
+      "concept_id": "data_visualization",
+      "name": "Data Visualization",
+      "skill_id": "visualization",
+      "role_id": "Data Analyst",
+      "prerequisites": ["descriptive_statistics"],
+      "role_importance": 0.8,
+      "difficulty": 2,
+      "estimated_learning_cost": 5
+    },
+    {
+      "concept_id": "dashboarding",
+      "name": "Dashboarding",
+      "skill_id": "visualization",
+      "role_id": "Data Analyst",
+      "prerequisites": ["data_visualization"],
+      "role_importance": 0.7,
+      "difficulty": 3,
+      "estimated_learning_cost": 6
+    }
+  ]
+}
