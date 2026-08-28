@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { RotateCcw, Compass } from "lucide-react";
 import ChatInterface, { type ChatHandle } from "@/components/ChatInterface";
 import JourneyRail from "@/components/JourneyRail";
+import QuizInterface from "@/components/QuizInterface"; // <-- Import the Quiz
 import { emptyProfile, LearnerProfile } from "@/lib/types";
 
 // No accounts, no IDs to manage — a fixed local id keeps the backend contract happy.
@@ -12,10 +13,12 @@ const LOCAL_ID = "local-learner";
 export default function Home() {
   const [mode, setMode] = useState<"demo" | "live">("demo");
   const [profile, setProfile] = useState<LearnerProfile>(emptyProfile(LOCAL_ID));
+  const [isTakingQuiz, setIsTakingQuiz] = useState(false); // <-- Track quiz state
   const chatRef = useRef<ChatHandle>(null);
 
   function reset() {
     setProfile(emptyProfile(LOCAL_ID));
+    setIsTakingQuiz(false); // <-- Reset quiz state on start over
     chatRef.current?.reset();
   }
 
@@ -61,24 +64,32 @@ export default function Home() {
       </header>
 
       {/* body */}
-      <div className="grid flex-1 gap-6 lg:grid-cols-[1fr_20rem]">
-        <section className="flex min-h-[34rem] flex-col rounded-2xl border border-line bg-canvas/40 p-4 lg:min-h-0">
-          <ChatInterface
-            ref={chatRef}
-            userId={LOCAL_ID}
-            mode={mode}
-            profile={profile}
-            onProfileChange={setProfile}
-          />
-        </section>
+      {!isTakingQuiz ? (
+        <div className="grid flex-1 gap-6 lg:grid-cols-[1fr_20rem]">
+          <section className="flex min-h-[34rem] flex-col rounded-2xl border border-line bg-canvas/40 p-4 lg:min-h-0">
+            <ChatInterface
+              ref={chatRef}
+              userId={LOCAL_ID}
+              mode={mode}
+              profile={profile}
+              onProfileChange={setProfile}
+            />
+          </section>
 
-        <section>
-          <JourneyRail
-            profile={profile}
-            onGeneratePath={() => chatRef.current?.send("Show me my learning path")}
-          />
+          <section>
+            <JourneyRail
+              profile={profile}
+              // <-- Change the action to trigger the quiz state instead of sending a chat message
+              onGeneratePath={() => setIsTakingQuiz(true)} 
+            />
+          </section>
+        </div>
+      ) : (
+        // <-- Render the Quiz Interface when the state is true
+        <section className="flex-1 w-full py-8">
+          <QuizInterface userId={LOCAL_ID} />
         </section>
-      </div>
+      )}
 
       <footer className="mt-6 text-center text-xs text-muted/60">
         {mode === "demo"

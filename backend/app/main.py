@@ -1,16 +1,10 @@
-"""
-Personalized Learning Path Recommender — backend API.
-
-Owned by Mads (conversational interface + profiling engine).
-The /profile endpoints are the contract surface every teammate consumes.
-"""
-
 import json
+import random
 from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -127,3 +121,109 @@ def chat(req: ChatRequest) -> ChatResponse:
     )
     storage.save_profile(profile)
     return ChatResponse(reply=_build_reply(profile), profile=profile)
+
+
+# ---------------------------------------------------------------------------
+# Quiz endpoints (BKT via WebSockets)
+# ---------------------------------------------------------------------------
+
+# BKT Constants
+P_GUESS = 0.25
+P_SLIP = 0.10
+P_TRANSIT = 0.05
+MASTERY_THRESHOLD = 0.95
+
+# Mock Database: Focus on Data Science & DBMS
+QUESTION_BANK = [
+    {"id": "q1", "topic": "sql_basics", "text": "Which clause is used to filter the results of a GROUP BY operation?", "options": ["WHERE", "HAVING", "ORDER BY", "FILTER"], "answer": "HAVING"},
+    {"id": "q2", "topic": "sql_basics", "text": "What does ACID stand for in database management?", "options": ["Atomicity, Consistency, Isolation, Durability", "Accuracy, Completeness, Integrity, Data", "Automated, Concurrent, Indexed, Distributed", "Array, Character, Integer, Double"], "answer": "Atomicity, Consistency, Isolation, Durability"},
+    {"id": "q3", "topic": "sql_basics", "text": "Which JOIN returns all rows from the right table, and the matched rows from the left table?", "options": ["INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "FULL OUTER JOIN"], "answer": "RIGHT JOIN"},
+    {"id": "q4", "topic": "numpy_basics", "text": "Which NumPy function is used to create an array of evenly spaced values?", "options": ["np.arange()", "np.linspace()", "Both A and B", "np.create()"], "answer": "Both A and B"}
+]
+
+class QuizSessionManager:
+    def __init__(self):
+        self.active_sessions = {}
+
+    async def connect(self, websocket: WebSocket, session_id: str, initial_knowledge: float):
+        await websocket.accept()
+        self.active_sessions[session_id] = {
+            "ws": websocket,
+            "p_mastery": initial_knowledge,
+            "asked_questions": []
+        }
+
+    def get_next_question(self, session_id: str):
+        asked = self.active_sessions[session_id]["asked_questions"]
+        available = [q for q in QUESTION_BANK if q["id"] not in asked]
+        if not available:
+            return None
+        question = random.choice(available)
+        self.active_sessions[session_id]["asked_questions"].append(question["id"])
+        return question
+
+    def update_bkt(self, session_id: str, is_correct: bool) -> float:
+        p_l = self.active_sessions[session_id]["p_mastery"]
+        
+        # 1. Update probability based on observation
+        if is_correct:
+            p_obs = (p_l * (1 - P_SLIP)) / ((p_l * (1 - P_SLIP)) + ((1 - p_l) * P_GUESS))
+        else:
+            p_obs = (p_l * P_SLIP) / ((p_l * P_SLIP) + ((1 - p_l) * (1 - P_GUESS)))
+            
+        # 2. Apply transit (learning) probability
+        p_new = p_obs + (1 - p_obs) * P_TRANSIT
+        self.active_sessions[session_id]["p_mastery"] = p_new
+        return p_new
+
+manager = QuizSessionManager()
+
+@app.websocket("/api/ws/quiz/{user_id}")
+async def quiz_endpoint(websocket: WebSocket, user_id: str):
+    # Retrieve profile to set the initial knowledge state dynamically
+    profile = storage.get_profile(user_id)
+    
+    initial_p = 0.20 # Default to beginner
+    if profile and hasattr(profile, 'experience_level'):
+        level = getattr(profile.experience_level, 'value', str(profile.experience_level)).lower()
+        if level == "intermediate":
+            initial_p = 0.50
+        elif level == "advanced":
+            initial_p = 0.80
+
+    await manager.connect(websocket, user_id, initial_p)
+    
+    try:
+        # Serve the first question
+        first_q = manager.get_next_question(user_id)
+        if first_q:
+            await websocket.send_json({"type": "question", "data": {"id": first_q["id"], "text": first_q["text"], "options": first_q["options"]}})
+        
+        while True:
+            data = await websocket.receive_text()
+            payload = json.loads(data)
+            
+            if payload["type"] == "answer":
+                q_id = payload["question_id"]
+                user_answer = payload["answer"]
+                question = next((q for q in QUESTION_BANK if q["id"] == q_id), None)
+                
+                if question:
+                    is_correct = (question["answer"] == user_answer)
+                    new_mastery = manager.update_bkt(user_id, is_correct)
+                    
+                    if new_mastery >= MASTERY_THRESHOLD:
+                        await websocket.send_json({"type": "complete", "message": "Mastery Achieved!", "mastery_level": round(new_mastery, 2)})
+                        break
+                    else:
+                        next_q = manager.get_next_question(user_id)
+                        if next_q:
+                            await websocket.send_json({"type": "question", "data": {"id": next_q["id"], "text": next_q["text"], "options": next_q["options"]}})
+                        else:
+                            await websocket.send_json({"type": "complete", "message": "Question pool exhausted.", "mastery_level": round(new_mastery, 2)})
+                            break
+                        
+    except WebSocketDisconnect:
+        # Clean up the session if the user drops off
+        if user_id in manager.active_sessions:
+            del manager.active_sessions[user_id]

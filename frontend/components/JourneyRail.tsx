@@ -109,7 +109,7 @@ export default function JourneyRail({
                 onClick={onGeneratePath}
                 className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-gold px-3 py-1.5 text-xs font-semibold text-white transition hover:brightness-105"
               >
-                Generate my path
+                Take Quiz
               </button>
             ) : (
               <p className="mt-0.5 text-xs text-muted/60">
