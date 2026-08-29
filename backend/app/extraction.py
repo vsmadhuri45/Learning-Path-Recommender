@@ -2,28 +2,10 @@ import json
 import os
 import re
 
-from openai import OpenAI
 from pydantic import BaseModel
-
+from . import llm
 from .graph import graph
 from .models import CompletedCourse,ExperienceLevel,Skill
-
-GROQ_MODEL="llama-3.3-70b-versatile"
-GROQ_BASE_URL="https://api.groq.com/openai/v1"
-
-_client:OpenAI|None=None
-
-
-def _get_client()->OpenAI:
-    global _client
-    if _client is None:
-        api_key=os.environ.get("GROQ_API_KEY")
-        if not api_key:
-            raise RuntimeError(
-            "GROQ_API_KEY is not set. Add it to backend/.env (see .env.example)."
-            )
-        _client=OpenAI(api_key=api_key,base_url=GROQ_BASE_URL)
-    return _client
 
 
 class ExtractionResult(BaseModel):
@@ -81,8 +63,8 @@ def extract(message:str,existing:dict|None=None)->ExtractionResult:
     if existing:
         user_content+=f"\n\nExisting profile (merge into this):\n{json.dumps(existing)}"
 
-    resp=_get_client().chat.completions.create(
-    model=GROQ_MODEL,
+    resp=llm.get_client().chat.completions.create(
+    model=llm.GROQ_MODEL,
     messages=[
     {"role":"system","content":_system_prompt()},
     {"role":"user","content":user_content}

@@ -26,12 +26,14 @@ interface JourneyRailProps {
   profile?: LearnerProfile;
   onGeneratePath?: () => void;
   roadmapData?: GapNode[] | null;
+  onExplain?: (title: string) => void;
 }
 
 export default function JourneyRail({
   profile,
   onGeneratePath,
-  roadmapData
+  roadmapData,
+  onExplain,
 }: JourneyRailProps) {
 
   // ==========================================
@@ -87,6 +89,14 @@ export default function JourneyRail({
                   Start Learning This Concept
                 </button>
               )}
+              {onExplain && (
+                <button
+                  onClick={() => onExplain(node.title)}
+                  className="mt-2 w-full py-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  Why is this on my path?
+                </button>
+              )}             
               {node.resources && node.resources.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {node.resources.map((r) => (

@@ -30,3 +30,16 @@ export async function getRoadmap(userId: string): Promise<RoadmapResponse> {
   }
   return res.json();
 }
+export async function askAssistant(userId: string, question: string): Promise<string> {
+  const res = await fetch(`${API_URL}/api/explain`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, question }),
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new Error(detail?.detail ?? `Request failed (${res.status})`);
+  }
+  const data = await res.json();
+  return data.answer;
+}

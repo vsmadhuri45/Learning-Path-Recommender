@@ -5,6 +5,7 @@ import { RotateCcw, Compass } from "lucide-react";
 import ChatInterface, { type ChatHandle } from "@/components/ChatInterface";
 import JourneyRail from "@/components/JourneyRail";
 import QuizInterface from "@/components/QuizInterface";
+import AssistantPanel, { type AssistantHandle } from "@/components/AssistantPanel";
 import { emptyProfile, LearnerProfile } from "@/lib/types";
 import { getRoadmap } from "@/lib/api";
 import { CriticalGap } from "@/lib/types";
@@ -19,7 +20,8 @@ export default function Home() {
   const [criticalGaps, setCriticalGaps] = useState<CriticalGap[]>([]);
   const hasTakenQuiz = useRef(false);
   const chatRef = useRef<ChatHandle>(null);
-
+  const assistantRef = useRef<AssistantHandle>(null);
+  const assistantPanelRef = useRef<HTMLDivElement>(null);
   // Fetch the gap analysis data
   useEffect(() => {
     if (isTakingQuiz) {
@@ -99,26 +101,39 @@ export default function Home() {
           />
         </section>
       ) : roadmapData && roadmapData.length > 0 ? (
-        // VIEW 2: THE FINAL ROADMAP (Takes over the whole screen)
-        <section className="flex-1 w-full py-8 max-w-3xl mx-auto">
+        // VIEW 2: THE FINAL ROADMAP — roadmap on the left, assistant pinned on the right
+        <section className="flex-1 w-full py-8 max-w-6xl mx-auto">
           <div className="mb-8 text-center">
             <h2 className="text-3xl font-display font-bold text-ink mb-2">Your Personalized Learning Path</h2>
             <p className="text-muted">Here is your step-by-step roadmap to master your goals.</p>
           </div>
-          {criticalGaps.length > 0 && (
-            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-sm font-semibold text-amber-800">Bottlenecks to clear first</p>
-              <ul className="mt-1.5 space-y-1 text-sm text-amber-700">
-                {criticalGaps.map((g, i) => (
-                  <li key={`${g.prerequisite_id}-${g.blocks}-${i}`}>
-                    Weak <strong>{g.prerequisite_id.replace(/_/g, " ")}</strong> is blocking{" "}
-                    <strong>{g.blocks.replace(/_/g, " ")}</strong>
-                  </li>
-                ))}
-              </ul>
+          <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+            <div>
+              {criticalGaps.length > 0 && (
+                <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-sm font-semibold text-amber-800">Bottlenecks to clear first</p>
+                  <ul className="mt-1.5 space-y-1 text-sm text-amber-700">
+                    {criticalGaps.map((g, i) => (
+                      <li key={`${g.prerequisite_id}-${g.blocks}-${i}`}>
+                        Weak <strong>{g.prerequisite_id.replace(/_/g, " ")}</strong> is blocking{" "}
+                        <strong>{g.blocks.replace(/_/g, " ")}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <JourneyRail
+                roadmapData={roadmapData}
+                onExplain={(title) => {
+                  assistantRef.current?.ask(`Why is ${title} on my learning path?`);
+                  assistantPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              />
             </div>
-          )}
-          <JourneyRail roadmapData={roadmapData} />
+            <div ref={assistantPanelRef} className="lg:sticky lg:top-6 lg:self-start">
+              <AssistantPanel ref={assistantRef} userId={LOCAL_ID} />
+            </div>
+          </div>
         </section>
       ) : (
         // VIEW 3: THE CHAT & SETUP (Default View)
