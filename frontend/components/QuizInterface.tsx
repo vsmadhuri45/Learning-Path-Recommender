@@ -7,7 +7,8 @@ interface QuestionData {
   options: string[];
 }
 
-export default function QuizInterface({ userId }: { userId: string }) {
+// 1. ADDED: onComplete function to the props
+export default function QuizInterface({ userId, onComplete }: { userId: string, onComplete: () => void }) {
   const [question, setQuestion] = useState<QuestionData | null>(null);
   const [status, setStatus] = useState<string>('Connecting to assessment engine...');
   const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
@@ -93,7 +94,12 @@ export default function QuizInterface({ userId }: { userId: string }) {
                   </div>
                   <h3 className="text-2xl font-bold text-gray-800">{status.split('!')[0]}!</h3>
                   <p className="text-gray-600">{status.split('!')[1]}</p>
-                  <button className="mt-6 px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                  
+                  {/* 2. ADDED: onClick trigger to the button */}
+                  <button 
+                    onClick={onComplete}
+                    className="mt-6 px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
+                  >
                     View Learning Path
                   </button>
                 </div>

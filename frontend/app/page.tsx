@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RotateCcw, Compass } from "lucide-react";
 import ChatInterface, { type ChatHandle } from "@/components/ChatInterface";
 import JourneyRail from "@/components/JourneyRail";
-import QuizInterface from "@/components/QuizInterface"; // <-- Import the Quiz
+import QuizInterface from "@/components/QuizInterface";
 import { emptyProfile, LearnerProfile } from "@/lib/types";
+import { getRoadmap } from "@/lib/api";
 
 // No accounts, no IDs to manage — a fixed local id keeps the backend contract happy.
 const LOCAL_ID = "local-learner";
@@ -13,12 +14,27 @@ const LOCAL_ID = "local-learner";
 export default function Home() {
   const [mode, setMode] = useState<"demo" | "live">("demo");
   const [profile, setProfile] = useState<LearnerProfile>(emptyProfile(LOCAL_ID));
-  const [isTakingQuiz, setIsTakingQuiz] = useState(false); // <-- Track quiz state
+  const [isTakingQuiz, setIsTakingQuiz] = useState(false);
+  const [roadmapData, setRoadmapData] = useState<any[] | null>(null);
   const chatRef = useRef<ChatHandle>(null);
+
+  // Fetch the gap analysis data
+  useEffect(() => {
+    getRoadmap(LOCAL_ID)
+      .then((data) => {
+        if (data && data.roadmap) {
+          setRoadmapData(data.roadmap);
+        }
+      })
+      .catch((err) => {
+        console.error("No roadmap available yet or error fetching:", err);
+      });
+  }, [isTakingQuiz]); // Re-fetch if quiz state changes (e.g., after completing the quiz)
 
   function reset() {
     setProfile(emptyProfile(LOCAL_ID));
-    setIsTakingQuiz(false); // <-- Reset quiz state on start over
+    setIsTakingQuiz(false);
+    setRoadmapData(null);
     chatRef.current?.reset();
   }
 
@@ -64,7 +80,26 @@ export default function Home() {
       </header>
 
       {/* body */}
-      {!isTakingQuiz ? (
+      {isTakingQuiz ? (
+        // VIEW 1: THE QUIZ
+        <section className="flex-1 w-full py-8">
+          {/* Error fixed here! Added onComplete prop */}
+          <QuizInterface 
+            userId={LOCAL_ID} 
+            onComplete={() => setIsTakingQuiz(false)} 
+          />
+        </section>
+      ) : roadmapData && roadmapData.length > 0 ? (
+        // VIEW 2: THE FINAL ROADMAP (Takes over the whole screen)
+        <section className="flex-1 w-full py-8 max-w-3xl mx-auto">
+          <div className="mb-8 text-center">
+            <h2 className="text-3xl font-display font-bold text-ink mb-2">Your Personalized Learning Path</h2>
+            <p className="text-muted">Here is your step-by-step roadmap to master your goals.</p>
+          </div>
+          <JourneyRail roadmapData={roadmapData} />
+        </section>
+      ) : (
+        // VIEW 3: THE CHAT & SETUP (Default View)
         <div className="grid flex-1 gap-6 lg:grid-cols-[1fr_20rem]">
           <section className="flex min-h-[34rem] flex-col rounded-2xl border border-line bg-canvas/40 p-4 lg:min-h-0">
             <ChatInterface
@@ -79,19 +114,13 @@ export default function Home() {
           <section>
             <JourneyRail
               profile={profile}
-              // <-- Change the action to trigger the quiz state instead of sending a chat message
               onGeneratePath={() => setIsTakingQuiz(true)} 
             />
           </section>
         </div>
-      ) : (
-        // <-- Render the Quiz Interface when the state is true
-        <section className="flex-1 w-full py-8">
-          <QuizInterface userId={LOCAL_ID} />
-        </section>
       )}
 
-      <footer className="mt-6 text-center text-xs text-muted/60">
+      <footer className="mt-12 text-center text-xs text-muted/60">
         {mode === "demo"
           ? "Demo mode — your path is built right in the browser, no backend needed."
           : "Live mode — talking to your FastAPI backend at /api/chat."}

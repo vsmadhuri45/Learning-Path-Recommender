@@ -14,6 +14,7 @@ from .models import Goals,LearnerProfile,Preferences
 
 load_dotenv()
 
+active_assessments = {}
 app=FastAPI(title="Learning Path Recommender API",version="0.3.0")
 
 app.add_middleware(
@@ -120,6 +121,14 @@ def _resolve_role(profile)->str:
     if role in graph.roles:
         return role
     return DEFAULT_ROLE
+
+@app.get("/api/roadmap/{user_id}")
+def get_roadmap(user_id: str):
+    engine = active_sessions.get(user_id)
+    if not engine:
+        raise HTTPException(status_code=404, detail="Assessment not found or session expired")
+    
+    return engine.generate_gap_roadmap()
 
 
 @app.websocket("/api/ws/quiz/{user_id}")

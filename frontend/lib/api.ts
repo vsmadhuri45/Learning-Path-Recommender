@@ -21,3 +21,11 @@ export async function sendChat(userId: string, message: string): Promise<ChatRes
   }
   return res.json();
 }
+
+export async function getRoadmap(userId: string) {
+  const res = await fetch(`http://localhost:8000/api/roadmap/${userId}`);
+  if (!res.ok) {
+    throw new Error('Failed to fetch roadmap');
+  }
+  return res.json();
+}

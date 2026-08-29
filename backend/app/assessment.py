@@ -116,3 +116,50 @@ class AssessmentEngine:
             "target_role":self.role,
             "concepts":concepts
         }
+    def generate_gap_roadmap(self):
+        """
+        Identifies all concepts below the 0.95 mastery threshold, orders them,
+        and constructs a To-Do roadmap with unlocked/locked learning statuses.
+        """
+        gap_tasks = []
+
+        # 1. Filter concepts where mastery is below 0.95
+        for state in self.states.values():
+            if state.mastery < bkt.MASTERY_THRESHOLD:
+                # Check whether all prerequisite concepts have reached the 0.95 threshold
+                prereqs = getattr(state.concept, "prerequisites", []) or []
+                prereqs_cleared = all(
+                    self.states[p].mastery >= bkt.MASTERY_THRESHOLD 
+                    for p in prereqs if p in self.states
+                )
+
+                # Concept is ready if prerequisites are met; otherwise locked
+                status = "Ready to Study" if prereqs_cleared else "Locked"
+
+                gap_tasks.append({
+                    "concept_id": state.concept.concept_id,
+                    "title": getattr(state.concept, "title", state.concept.concept_id.replace("_", " ").title()),
+                    "skill_id": state.concept.skill_id,
+                    "current_mastery": round(state.mastery, 3),
+                    "target_mastery": bkt.MASTERY_THRESHOLD,  # 0.95
+                    "status": status,
+                    "difficulty": state.concept.difficulty,
+                    "role_importance": state.concept.role_importance,
+                    "feedback": f"You are weak in {state.concept.concept_id.replace('_', ' ')}. Target mastery is 95%."
+                })
+
+        # 2. Sort roadmap: Ready tasks first, then by difficulty and importance
+        gap_tasks.sort(
+            key=lambda item: (
+                0 if item["status"] == "Ready to Study" else 1,
+                item["difficulty"],
+                -item["role_importance"]
+            )
+        )
+
+        return {
+            "student_id": self.student_id,
+            "target_role": self.role,
+            "total_gaps": len(gap_tasks),
+            "roadmap": gap_tasks
+        }
