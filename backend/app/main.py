@@ -1,7 +1,7 @@
 import json
 from datetime import datetime,timezone
 from pathlib import Path
-
+from . import assistant
 from dotenv import load_dotenv
 from fastapi import FastAPI,HTTPException,WebSocket,WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -121,6 +121,30 @@ def _resolve_role(profile)->str:
         return role
     return DEFAULT_ROLE
 
+class ExplainRequest(BaseModel):
+    user_id:str
+    question:str
+
+
+class ExplainResponse(BaseModel):
+    answer:str
+
+
+@app.post("/api/explain",response_model=ExplainResponse)
+def explain(req:ExplainRequest)->ExplainResponse:
+    profile=storage.get_profile(req.user_id)
+    profile_dict=profile.model_dump(mode="json") if profile else None
+
+    engine=active_sessions.get(req.user_id)
+    roadmap_data=roadmap_module.build_roadmap(engine) if engine else None
+
+    try:
+        answer=assistant.explain(req.question,profile_dict,roadmap_data)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503,detail=str(e))
+
+    return ExplainResponse(answer=answer)
+
 @app.get("/api/roadmap/{user_id}")
 def get_roadmap(user_id: str):
     engine = active_sessions.get(user_id)
@@ -186,3 +210,27 @@ async def quiz_endpoint(websocket:WebSocket,user_id:str):
     except WebSocketDisconnect:
         if user_id in active_sessions:
             del active_sessions[user_id]
+
+class ExplainRequest(BaseModel):
+    user_id:str
+    question:str
+
+
+class ExplainResponse(BaseModel):
+    answer:str
+
+
+@app.post("/api/explain",response_model=ExplainResponse)
+def explain(req:ExplainRequest)->ExplainResponse:
+    profile=storage.get_profile(req.user_id)
+    profile_dict=profile.model_dump(mode="json") if profile else None
+
+    engine=active_sessions.get(req.user_id)
+    roadmap_data=roadmap_module.build_roadmap(engine) if engine else None
+
+    try:
+        answer=assistant.explain(req.question,profile_dict,roadmap_data)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503,detail=str(e))
+
+    return ExplainResponse(answer=answer)
