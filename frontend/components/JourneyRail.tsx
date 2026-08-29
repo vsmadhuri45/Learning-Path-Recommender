@@ -7,7 +7,7 @@ export interface GapNode {
   concept_id: string;
   title: string;
   current_mastery: number;
-  target: number;
+  target_mastery: number;
   status: 'Ready to Study' | 'Locked' | 'Needs Mastery';
 }
 
@@ -75,7 +75,7 @@ export default function JourneyRail({
                   ></div>
                 </div>
                 <div className="text-gray-600 font-medium whitespace-nowrap">
-                  {(node.current_mastery * 100).toFixed(0)}% / {(node.target * 100).toFixed(0)}% Target
+                  {(node.current_mastery * 100).toFixed(0)}% / {(node.target_mastery * 100).toFixed(0)}% Target
                 </div>
               </div>
               
