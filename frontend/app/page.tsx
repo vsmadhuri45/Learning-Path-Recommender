@@ -7,7 +7,7 @@ import JourneyRail from "@/components/JourneyRail";
 import QuizInterface from "@/components/QuizInterface";
 import { emptyProfile, LearnerProfile } from "@/lib/types";
 import { getRoadmap } from "@/lib/api";
-
+import { CriticalGap } from "@/lib/types";
 // No accounts, no IDs to manage — a fixed local id keeps the backend contract happy.
 const LOCAL_ID = "local-learner";
 
@@ -16,14 +16,22 @@ export default function Home() {
   const [profile, setProfile] = useState<LearnerProfile>(emptyProfile(LOCAL_ID));
   const [isTakingQuiz, setIsTakingQuiz] = useState(false);
   const [roadmapData, setRoadmapData] = useState<any[] | null>(null);
+  const [criticalGaps, setCriticalGaps] = useState<CriticalGap[]>([]);
+  const hasTakenQuiz = useRef(false);
   const chatRef = useRef<ChatHandle>(null);
 
   // Fetch the gap analysis data
   useEffect(() => {
+    if (isTakingQuiz) {
+      hasTakenQuiz.current = true;
+      return;
+    }
+    if (!hasTakenQuiz.current) return; // skip the fetch on first mount / before any quiz
     getRoadmap(LOCAL_ID)
       .then((data) => {
         if (data && data.roadmap) {
           setRoadmapData(data.roadmap);
+          setCriticalGaps(data.gap_analysis?.critical_gaps ?? []);
         }
       })
       .catch((err) => {
@@ -35,6 +43,7 @@ export default function Home() {
     setProfile(emptyProfile(LOCAL_ID));
     setIsTakingQuiz(false);
     setRoadmapData(null);
+    setCriticalGaps([]);
     chatRef.current?.reset();
   }
 
@@ -96,6 +105,19 @@ export default function Home() {
             <h2 className="text-3xl font-display font-bold text-ink mb-2">Your Personalized Learning Path</h2>
             <p className="text-muted">Here is your step-by-step roadmap to master your goals.</p>
           </div>
+          {criticalGaps.length > 0 && (
+            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm font-semibold text-amber-800">Bottlenecks to clear first</p>
+              <ul className="mt-1.5 space-y-1 text-sm text-amber-700">
+                {criticalGaps.map((g, i) => (
+                  <li key={`${g.prerequisite_id}-${g.blocks}-${i}`}>
+                    Weak <strong>{g.prerequisite_id.replace(/_/g, " ")}</strong> is blocking{" "}
+                    <strong>{g.blocks.replace(/_/g, " ")}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <JourneyRail roadmapData={roadmapData} />
         </section>
       ) : (

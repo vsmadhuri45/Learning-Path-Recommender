@@ -1,5 +1,5 @@
 import { LearnerProfile } from "./types";
-
+import { RoadmapResponse } from "./types";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export interface ChatResult {
@@ -22,8 +22,9 @@ export async function sendChat(userId: string, message: string): Promise<ChatRes
   return res.json();
 }
 
-export async function getRoadmap(userId: string) {
-  const res = await fetch(`http://localhost:8000/api/roadmap/${userId}`);
+
+export async function getRoadmap(userId: string): Promise<RoadmapResponse> {
+  const res = await fetch(`${API_URL}/api/roadmap/${userId}`);
   if (!res.ok) {
     throw new Error('Failed to fetch roadmap');
   }
