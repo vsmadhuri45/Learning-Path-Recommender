@@ -8,7 +8,9 @@ export interface GapNode {
   title: string;
   current_mastery: number;
   target_mastery: number;
-  status: 'Ready to Study' | 'Locked' | 'Needs Mastery';
+  status: 'Ready to Study' | 'Locked' ;
+  priority?: number;
+  resources?: { title: string; type: string; url: string }[];  
 }
 
 type Stop = {
@@ -85,6 +87,21 @@ export default function JourneyRail({
                   Start Learning This Concept
                 </button>
               )}
+              {node.resources && node.resources.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {node.resources.map((r) => (
+                    <a
+                      key={r.url}
+                      href={r.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800"
+                    >
+                      {r.title}
+                    </a>
+                  ))}
+                </div>
+              )}               
             </div>
           </div>
         ))}

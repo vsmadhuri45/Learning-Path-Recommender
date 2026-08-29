@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI,HTTPException,WebSocket,WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
+from . import roadmap as roadmap_module
 from . import extraction,storage
 from .assessment import AssessmentEngine
 from .graph import graph
@@ -14,7 +14,6 @@ from .models import Goals,LearnerProfile,Preferences
 
 load_dotenv()
 
-active_assessments = {}
 app=FastAPI(title="Learning Path Recommender API",version="0.3.0")
 
 app.add_middleware(
@@ -128,7 +127,7 @@ def get_roadmap(user_id: str):
     if not engine:
         raise HTTPException(status_code=404, detail="Assessment not found or session expired")
     
-    return engine.generate_gap_roadmap()
+    return roadmap_module.build_roadmap(engine)
 
 
 @app.websocket("/api/ws/quiz/{user_id}")

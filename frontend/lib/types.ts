@@ -50,3 +50,21 @@ export function emptyProfile(userId: string): LearnerProfile {
     preferences: { time_commitment: null, preferred_formats: [] },
   };
 }
+export interface CriticalGap {
+  prerequisite_id: string;
+  blocks: string;
+  prerequisite_mastery: number | null;
+}
+
+export interface GapAnalysis {
+  buckets: { strong: string[]; partial: string[]; weak: string[] };
+  critical_gaps: CriticalGap[];
+}
+
+export interface RoadmapResponse {
+  student_id: string;
+  target_role: string;
+  total_gaps: number;
+  roadmap: import("@/components/JourneyRail").GapNode[];
+  gap_analysis: GapAnalysis;
+}
