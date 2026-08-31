@@ -1,149 +1,151 @@
 import json
-from datetime import datetime,timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from . import assistant
 from dotenv import load_dotenv
-from fastapi import FastAPI,HTTPException,WebSocket,WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from . import roadmap as roadmap_module
-from . import extraction,storage
+from . import extraction, storage
 from .assessment import AssessmentEngine
 from .graph import graph
-from .models import Goals,LearnerProfile,Preferences
+from .models import Goals, LearnerProfile, Preferences
 
 load_dotenv()
 
-app=FastAPI(title="Learning Path Recommender API",version="0.3.0")
+app = FastAPI(title="Learning Path Recommender API", version="0.3.0")
 
 app.add_middleware(
-CORSMiddleware,
-allow_origins=["http://localhost:3000"],
-allow_methods=["*"],
-allow_headers=["*"]
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"]
 )
 
-FIXTURES_DIR=Path(__file__).resolve().parent.parent/"fixtures"
+FIXTURES_DIR = Path(__file__).resolve().parent.parent / "fixtures"
 
 
 @app.on_event("startup")
-def load_fixtures()->None:
+def load_fixtures() -> None:
     for path in FIXTURES_DIR.glob("*.json"):
-        data=json.loads(path.read_text())
+        data = json.loads(path.read_text())
         storage.save_profile(LearnerProfile(**data))
 
 
 @app.get("/")
-def health()->dict:
-    return {"status":"ok","service":"learning-path-recommender"}
+def health() -> dict:
+    return {"status": "ok", "service": "learning-path-recommender"}
 
 
-@app.post("/api/profile",response_model=LearnerProfile)
-def upsert_profile(profile:LearnerProfile)->LearnerProfile:
-    now=datetime.now(timezone.utc)
+@app.post("/api/profile", response_model=LearnerProfile)
+def upsert_profile(profile: LearnerProfile) -> LearnerProfile:
+    now = datetime.now(timezone.utc)
     if profile.created_at is None:
-        profile.created_at=now
-    profile.updated_at=now
+        profile.created_at = now
+    profile.updated_at = now
     return storage.save_profile(profile)
 
 
-@app.get("/api/profile/{user_id}",response_model=LearnerProfile)
-def read_profile(user_id:str)->LearnerProfile:
-    profile=storage.get_profile(user_id)
+@app.get("/api/profile/{user_id}", response_model=LearnerProfile)
+def read_profile(user_id: str) -> LearnerProfile:
+    profile = storage.get_profile(user_id)
     if profile is None:
-        raise HTTPException(status_code=404,detail="Profile not found")
+        raise HTTPException(status_code=404, detail="Profile not found")
     return profile
 
 
 class ChatRequest(BaseModel):
-    user_id:str
-    message:str
+    user_id: str
+    message: str
 
 
 class ChatResponse(BaseModel):
-    reply:str
-    profile:LearnerProfile
+    reply: str
+    profile: LearnerProfile
 
 
-def _build_reply(profile:LearnerProfile)->str:
-    bits:list[str]=[]
+def _build_reply(profile: LearnerProfile) -> str:
+    bits: list[str] = []
     if profile.goals.target_role:
         bits.append(f"aiming to become a {profile.goals.target_role}")
     bits.append(f"at a {profile.experience_level.value} level")
     if profile.current_skills:
-        skills=", ".join(s.skill for s in profile.current_skills)
+        skills = ", ".join(s.skill for s in profile.current_skills)
         bits.append(f"with some {skills}")
-    summary="; ".join(bits)
+    summary = "; ".join(bits)
     return f"Got it — I've noted you're {summary}. Tell me more, or ask for your learning path."
 
 
-@app.post("/api/chat",response_model=ChatResponse)
-def chat(req:ChatRequest)->ChatResponse:
-    existing=storage.get_profile(req.user_id)
-    existing_dict=existing.model_dump(mode="json") if existing else None
+@app.post("/api/chat", response_model=ChatResponse)
+def chat(req: ChatRequest) -> ChatResponse:
+    existing = storage.get_profile(req.user_id)
+    existing_dict = existing.model_dump(mode="json") if existing else None
 
     try:
-        result=extraction.extract(req.message,existing_dict)
+        result = extraction.extract(req.message, existing_dict)
     except RuntimeError as e:
-        raise HTTPException(status_code=503,detail=str(e))
+        raise HTTPException(status_code=503, detail=str(e))
 
-    now=datetime.now(timezone.utc)
-    profile=LearnerProfile(
-    user_id=req.user_id,
-    created_at=existing.created_at if existing else now,
-    updated_at=now,
-    interests=result.interests,
-    experience_level=result.experience_level or "beginner",
-    goals=Goals(
-    raw_text=req.message,
-    parsed=result.parsed_goals,
-    target_role=result.target_role
-    ),
-    completed_courses=result.completed_courses,
-    current_skills=result.current_skills,
-    preferences=Preferences(
-    time_commitment=result.time_commitment,
-    preferred_formats=result.preferred_formats
-    )
+    now = datetime.now(timezone.utc)
+    profile = LearnerProfile(
+        user_id=req.user_id,
+        created_at=existing.created_at if existing else now,
+        updated_at=now,
+        interests=result.interests,
+        experience_level=result.experience_level or "beginner",
+        goals=Goals(
+            raw_text=req.message,
+            parsed=result.parsed_goals,
+            target_role=result.target_role
+        ),
+        completed_courses=result.completed_courses,
+        current_skills=result.current_skills,
+        preferences=Preferences(
+            time_commitment=result.time_commitment,
+            preferred_formats=result.preferred_formats
+        )
     )
     storage.save_profile(profile)
-    return ChatResponse(reply=_build_reply(profile),profile=profile)
+    return ChatResponse(reply=_build_reply(profile), profile=profile)
 
 
-DEFAULT_ROLE="ML Engineer"
+DEFAULT_ROLE = "ML Engineer"
 
-active_sessions:dict[str,AssessmentEngine]={}
+active_sessions: dict[str, AssessmentEngine] = {}
 
 
-def _resolve_role(profile)->str:
-    role=profile.goals.target_role if profile else None
+def _resolve_role(profile) -> str:
+    role = profile.goals.target_role if profile else None
     if role in graph.roles:
         return role
     return DEFAULT_ROLE
 
+
 class ExplainRequest(BaseModel):
-    user_id:str
-    question:str
+    user_id: str
+    question: str
 
 
 class ExplainResponse(BaseModel):
-    answer:str
+    answer: str
 
 
-@app.post("/api/explain",response_model=ExplainResponse)
-def explain(req:ExplainRequest)->ExplainResponse:
-    profile=storage.get_profile(req.user_id)
-    profile_dict=profile.model_dump(mode="json") if profile else None
+@app.post("/api/explain", response_model=ExplainResponse)
+def explain(req: ExplainRequest) -> ExplainResponse:
+    profile = storage.get_profile(req.user_id)
+    profile_dict = profile.model_dump(mode="json") if profile else None
 
-    engine=active_sessions.get(req.user_id)
-    roadmap_data=roadmap_module.build_roadmap(engine) if engine else None
+    engine = active_sessions.get(req.user_id)
+    roadmap_data = roadmap_module.build_roadmap(engine) if engine else None
 
     try:
-        answer=assistant.explain(req.question,profile_dict,roadmap_data)
+        answer = assistant.explain(req.question, profile_dict, roadmap_data)
     except RuntimeError as e:
-        raise HTTPException(status_code=503,detail=str(e))
+        raise HTTPException(status_code=503, detail=str(e))
 
     return ExplainResponse(answer=answer)
+
 
 @app.get("/api/roadmap/{user_id}")
 def get_roadmap(user_id: str):
@@ -155,82 +157,82 @@ def get_roadmap(user_id: str):
 
 
 @app.websocket("/api/ws/quiz/{user_id}")
-async def quiz_endpoint(websocket:WebSocket,user_id:str):
+async def quiz_endpoint(websocket: WebSocket, user_id: str):
     await websocket.accept()
-    profile=storage.get_profile(user_id)
-    role=_resolve_role(profile)
-    current_skills=profile.current_skills if profile else []
-    engine=AssessmentEngine(student_id=user_id,role=role,current_skills=current_skills)
-    active_sessions[user_id]=engine
+    profile = storage.get_profile(user_id)
+    role = _resolve_role(profile)
+    current_skills = profile.current_skills if profile else []
+    
+    # We are using max_questions=4 to fit the 3 two-liner and 1 paragraph format
+    engine = AssessmentEngine(student_id=user_id, role=role, current_skills=current_skills, max_questions=14)
+    active_sessions[user_id] = engine
 
     try:
-        await websocket.send_json({"type":"start","role":role})
+        await websocket.send_json({"type": "start", "role": role})
 
-        first_q=engine.next_question()
+        first_q = engine.next_question()
         if first_q:
-            await websocket.send_json({"type":"question","data":{"id":first_q["id"],"text":first_q["text"],"options":first_q["options"]}})
+            await websocket.send_json({
+                "type": "question", 
+                "data": {
+                    "id": first_q["id"], 
+                    "text": first_q["text"], 
+                    "question_type": first_q.get("type", "mcq"),
+                    "options": first_q.get("options", [])
+                }
+            })
         else:
-            await websocket.send_json({"type":"complete","message":"Question pool exhausted.","mastery_level":round(engine.overall_mastery(),2),"profile":engine.knowledge_profile()})
+            await websocket.send_json({"type": "complete", "message": "Question pool exhausted.", "mastery_level": round(engine.overall_mastery(), 2), "profile": engine.knowledge_profile()})
 
         while True:
-            data=await websocket.receive_text()
+            data = await websocket.receive_text()
 
             try:
-                payload=json.loads(data)
+                payload = json.loads(data)
             except json.JSONDecodeError:
-                await websocket.send_json({"type":"error","message":"malformed message"})
+                await websocket.send_json({"type": "error", "message": "malformed message"})
                 continue
 
-            if payload.get("type")!="answer":
-                await websocket.send_json({"type":"error","message":"unknown message type"})
+            if payload.get("type") != "answer":
+                await websocket.send_json({"type": "error", "message": "unknown message type"})
                 continue
 
-            q_id=payload.get("question_id")
-            user_answer=payload.get("answer")
+            q_id = payload.get("question_id")
+            user_answer = payload.get("answer")
             if q_id is None or user_answer is None:
-                await websocket.send_json({"type":"error","message":"missing question_id or answer"})
+                await websocket.send_json({"type": "error", "message": "missing question_id or answer"})
                 continue
 
-            result=engine.submit_answer(q_id,user_answer)
-            if result is None:
-                await websocket.send_json({"type":"error","message":"question_id did not match the current question"})
+            eval_result = engine.submit_answer(q_id, user_answer)
+            if eval_result is None:
+                await websocket.send_json({"type": "error", "message": "question_id did not match the current question"})
                 continue
+
+            # Send LLM grading feedback back to frontend
+            await websocket.send_json({
+                "type": "feedback",
+                "data": eval_result
+            })
 
             if engine.is_complete():
-                await websocket.send_json({"type":"complete","message":"Assessment Complete!","mastery_level":round(engine.overall_mastery(),2),"profile":engine.knowledge_profile()})
+                await websocket.send_json({"type": "complete", "message": "Assessment Complete!", "mastery_level": round(engine.overall_mastery(), 2), "profile": engine.knowledge_profile()})
                 break
 
-            next_q=engine.next_question()
+            next_q = engine.next_question()
             if next_q:
-                await websocket.send_json({"type":"question","data":{"id":next_q["id"],"text":next_q["text"],"options":next_q["options"]}})
+                await websocket.send_json({
+                    "type": "question", 
+                    "data": {
+                        "id": next_q["id"], 
+                        "text": next_q["text"], 
+                        "question_type": next_q.get("type", "mcq"),
+                        "options": next_q.get("options", [])
+                    }
+                })
             else:
-                await websocket.send_json({"type":"complete","message":"Question pool exhausted.","mastery_level":round(engine.overall_mastery(),2),"profile":engine.knowledge_profile()})
+                await websocket.send_json({"type": "complete", "message": "Question pool exhausted.", "mastery_level": round(engine.overall_mastery(), 2), "profile": engine.knowledge_profile()})
                 break
 
     except WebSocketDisconnect:
         if user_id in active_sessions:
             del active_sessions[user_id]
-
-class ExplainRequest(BaseModel):
-    user_id:str
-    question:str
-
-
-class ExplainResponse(BaseModel):
-    answer:str
-
-
-@app.post("/api/explain",response_model=ExplainResponse)
-def explain(req:ExplainRequest)->ExplainResponse:
-    profile=storage.get_profile(req.user_id)
-    profile_dict=profile.model_dump(mode="json") if profile else None
-
-    engine=active_sessions.get(req.user_id)
-    roadmap_data=roadmap_module.build_roadmap(engine) if engine else None
-
-    try:
-        answer=assistant.explain(req.question,profile_dict,roadmap_data)
-    except RuntimeError as e:
-        raise HTTPException(status_code=503,detail=str(e))
-
-    return ExplainResponse(answer=answer)

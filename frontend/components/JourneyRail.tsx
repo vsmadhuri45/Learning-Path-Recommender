@@ -36,6 +36,15 @@ export default function JourneyRail({
   onExplain,
 }: JourneyRailProps) {
 
+  // Handler to open the first resource link when "Start Learning This Concept" is clicked
+  const handleStartLearning = (resources?: { title: string; type: string; url: string }[]) => {
+    if (resources && resources.length > 0 && resources[0].url) {
+      window.open(resources[0].url, '_blank', 'noopener,noreferrer');
+    } else {
+      alert("No external course link available for this concept yet.");
+    }
+  };
+
   // ==========================================
   // PHASE 2: ROADMAP MODE (If data is present)
   // ==========================================
@@ -85,7 +94,10 @@ export default function JourneyRail({
               
               {/* Call to action */}
               {node.status === 'Ready to Study' && (
-                <button className="mt-4 w-full py-2 bg-black text-white rounded-md font-medium hover:bg-gray-800 transition-colors">
+                <button 
+                  onClick={() => handleStartLearning(node.resources)}
+                  className="mt-4 w-full py-2 bg-black text-white rounded-md font-medium hover:bg-gray-800 transition-colors cursor-pointer"
+                >
                   Start Learning This Concept
                 </button>
               )}
@@ -96,22 +108,8 @@ export default function JourneyRail({
                 >
                   Why is this on my path?
                 </button>
-              )}             
-              {node.resources && node.resources.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {node.resources.map((r) => (
-                    <a
-                      key={r.url}
-                      href={r.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800"
-                    >
-                      {r.title}
-                    </a>
-                  ))}
-                </div>
-              )}               
+              )}            
+              
             </div>
           </div>
         ))}

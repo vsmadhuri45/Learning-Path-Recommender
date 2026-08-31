@@ -50,6 +50,7 @@ export function emptyProfile(userId: string): LearnerProfile {
     preferences: { time_commitment: null, preferred_formats: [] },
   };
 }
+
 export interface CriticalGap {
   prerequisite_id: string;
   blocks: string;
@@ -67,4 +68,20 @@ export interface RoadmapResponse {
   total_gaps: number;
   roadmap: import("@/components/JourneyRail").GapNode[];
   gap_analysis: GapAnalysis;
+}
+
+// --- NEW QUIZ INTERFACES ---
+
+export interface QuestionData {
+  id: string;
+  text: string;
+  question_type: 'mcq' | 'two_liner' | 'paragraph';
+  options?: string[]; // Optional since text questions won't have options
+}
+
+export interface FeedbackData {
+  correct: boolean;
+  score: number;
+  feedback: string;
+  current_mastery: number;
 }
